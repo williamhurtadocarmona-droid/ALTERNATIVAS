@@ -8,7 +8,7 @@ import os
 st.set_page_config(page_title="Generador GFPI-F-165 SENA", page_icon="📊", layout="centered")
 
 st.title("📊 Generador de Formato GFPI-F-165 (Etapa Productiva)")
-st.write("Sube el reporte de Sofia Plus para llenar el formato **Grupal** y generar las pestañas **Individuales**.")
+st.write("Sube el reporte de Sofia Plus para llenar la pestaña **Grupal** desde C18 y generar las **Individuales**.")
 
 # Función para escribir de forma segura en celdas combinadas (Merged Cells)
 def escribir_celda_segura(hoja, fila, columna, valor):
@@ -17,7 +17,6 @@ def escribir_celda_segura(hoja, fila, columna, valor):
         celda.value = valor
     else:
         # Si la celda es parte de un rango combinado, buscamos la celda principal (top-left)
-        coord = celda.coordinate if hasattr(celda, 'coordinate') else None
         for rango in hoja.merged_cells.ranges:
             if (fila, columna) in list(rango.cells):
                 hoja.cell(row=rango.min_row, column=rango.min_col, value=valor)
@@ -88,10 +87,10 @@ if excel_reporte is not None:
                     with st.spinner(f"Procesando {cant_unicos_activos} aprendices..."):
                         
                         wb = openpyxl.load_workbook(PLANTILLA_BASE)
-                        wb.calculation.calcMode = 'manual' # Para mejorar velocidad al abrir
+                        wb.calculation.calcMode = 'manual'  # Para acelerar apertura
 
                         # ==========================================
-                        # A. LLENAR PESTAÑA GRUPAL (Mapeo idéntico a tu ejemplo)
+                        # A. LLENAR PESTAÑA GRUPAL (Desde C18)
                         # ==========================================
                         HOJA_GRUPAL_NOMBRE = "Selección formato 1 - Grupal"
                         if HOJA_GRUPAL_NOMBRE in wb.sheetnames:
@@ -107,17 +106,17 @@ if excel_reporte is not None:
                                 tipo_doc = str(row[col_tipo_doc]).strip() if col_tipo_doc and pd.notna(row[col_tipo_doc]) else ""
                                 num_doc = str(row[col_num_doc]).strip() if col_num_doc and pd.notna(row[col_num_doc]) else ""
 
-                                # Mapeo de columnas según el diseño oficial:
-                                escribir_celda_segura(hoja_grupal, fila_actual, 1, i + 1)           # Col A (1): N°
-                                escribir_celda_segura(hoja_grupal, fila_actual, 2, tipo_doc)       # Col B (2): Tipo de documento
-                                escribir_celda_segura(hoja_grupal, fila_actual, 3, num_doc)        # Col C (3): Número de identificación
-                                escribir_celda_segura(hoja_grupal, fila_actual, 4, nomb)           # Col D (4): Nombres
-                                escribir_celda_segura(hoja_grupal, fila_actual, 5, apel)           # Col E (5): Apellidos
+                                # Instrucción exacta:
+                                escribir_celda_segura(hoja_grupal, fila_actual, 2, i + 1)      # B18: N° (1, 2, 3...)
+                                escribir_celda_segura(hoja_grupal, fila_actual, 3, tipo_doc)  # C18: Tipo de documento
+                                escribir_celda_segura(hoja_grupal, fila_actual, 4, num_doc)   # D18: Número de identificación
+                                escribir_celda_segura(hoja_grupal, fila_actual, 5, nomb)      # E18: Nombres
+                                escribir_celda_segura(hoja_grupal, fila_actual, 6, apel)      # F18: Apellidos
                                 
                                 if col_correo and pd.notna(row[col_correo]):
-                                    escribir_celda_segura(hoja_grupal, fila_actual, 7, str(row[col_correo]))  # Col G (7): Correo electrónico
+                                    escribir_celda_segura(hoja_grupal, fila_actual, 8, str(row[col_correo]))  # H18: Correo electrónico
                                 if col_tel and pd.notna(row[col_tel]):
-                                    escribir_celda_segura(hoja_grupal, fila_actual, 8, str(row[col_tel]))     # Col H (8): Teléfono
+                                    escribir_celda_segura(hoja_grupal, fila_actual, 9, str(row[col_tel]))     # I18: Teléfono
 
                         # ==========================================
                         # B. GENERAR PESTAÑAS INDIVIDUALES
@@ -173,7 +172,7 @@ if excel_reporte is not None:
                             file_name=f"GFPI-F-165_Ficha_{ficha}_Consolidado.xlsx",
                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                         )
-                        st.success(f"¡Perfecto! Se organizaron todas las columnas exactamente como en tu ejemplo a partir de la fila 18.")
+                        st.success(f"¡Excelente! Ahora los datos se escriben a partir de la celda C18 exactamente como me diste la instrucción.")
 
     except Exception as e:
         st.error(f"Ocurrió un error al procesar el archivo: {e}")
