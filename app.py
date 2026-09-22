@@ -35,11 +35,11 @@ if excel_reporte is not None:
             col_estado = [c for c in df_aprendices.columns if 'Estado' in c or 'ESTADO' in c]
             col_estado = col_estado[0] if col_estado else df_aprendices.columns[-1]
 
-            # Detectar columna de Documento (para eliminar duplicados únicos por cédula)
-            col_num_doc = [c for c in df_aprendices.columns if 'Número' in c or 'Documento' in c or 'Identificación' in c or 'Cedula' in c]
-            col_num_doc = col_num_doc[0] if col_num_doc else df_aprendices.columns[1]
+            # Detectar Número de Documento (excluyendo 'Tipo')
+            col_num_doc = [c for c in df_aprendices.columns if ('Número' in c or 'Numero' in c or 'Documento' in c or 'Identificación' in c) and 'Tipo' not in c]
+            col_num_doc = col_num_doc[0] if col_num_doc else None
 
-            # Detectar columnas de Nombres y Apellidos
+            # Detectar Nombres y Apellidos
             col_nombres = [c for c in df_aprendices.columns if 'Nombre' in c or 'Aprendiz' in c]
             col_apellidos = [c for c in df_aprendices.columns if 'Apellido' in c]
             
@@ -52,9 +52,16 @@ if excel_reporte is not None:
             col_tel = [c for c in df_aprendices.columns if 'Teléfono' in c or 'Celular' in c or 'Móvil' in c]
             col_tel = col_tel[0] if col_tel else None
 
-            # 4. FILTRAR POR "EN FORMACIÓN" Y ELIMINAR REPETIDOS POR CÉDULA
+            # 4. FILTRAR POR "EN FORMACIÓN"
             df_activos = df_aprendices[df_aprendices[col_estado].astype(str).str.upper().str.contains("EN FORMAC", na=False)].copy()
-            df_unicos = df_activos.drop_duplicates(subset=[col_num_doc]).copy()
+
+            # Definir columna clave para deduplicar (prioridad: Número de documento, si no Nombres)
+            col_clave = col_num_doc if col_num_doc else (col_nombres[0] if col_nombres else None)
+
+            if col_clave:
+                df_unicos = df_activos.drop_duplicates(subset=[col_clave]).copy()
+            else:
+                df_unicos = df_activos.copy()
 
             cant_totales_filas = len(df_aprendices)
             cant_unicos_activos = len(df_unicos)
@@ -64,11 +71,12 @@ if excel_reporte is not None:
             if cant_unicos_activos == 0:
                 st.warning("⚠️ No se encontraron aprendices con estado 'EN FORMACIÓN' en el archivo.")
             else:
-                # Mostrar vista previa limpia
-                st.dataframe(df_unicos[[col_num_doc] + ([col_nombres[0]] if col_nombres else []) + [col_estado]].head(10))
+                # Mostrar vista previa
+                cols_mostrar = [c for c in [col_tipo_doc, col_num_doc, col_nombres[0] if col_nombres else None, col_estado] if c is not None]
+                st.dataframe(df_unicos[cols_mostrar].head(10))
 
                 if st.button("🚀 Generar Excel con Pestañas Individuales"):
-                    with st.spinner(f"Generando {cant_unicos_activos} pestañas sin duplicados..."):
+                    with st.spinner(f"Generando {cant_unicos_activos} pestañas individuales..."):
                         
                         wb = openpyxl.load_workbook(PLANTILLA_BASE)
                         
@@ -95,11 +103,12 @@ if excel_reporte is not None:
                                 nombre = " ".join(nombre_completo[:2]) if len(nombre_completo) > 1 else nombre_completo[0]
                                 apellido = " ".join(nombre_completo[2:]) if len(nombre_completo) > 2 else ""
 
-                            tipo_doc = str(row[col_tipo_doc]) if col_tipo_doc else ""
-                            num_doc = str(row[col_num_doc]).strip()
+                            tipo_doc = str(row[col_tipo_doc]) if col_tipo_doc and pd.notna(row[col_tipo_doc]) else ""
+                            num_doc = str(row[col_num_doc]).strip() if col_num_doc and pd.notna(row[col_num_doc]) else ""
 
-                            # Título corto para la pestaña (Excel solo permite máximo 31 caracteres)
-                            titulo_pestaña = f"{nombre.split()[0]} {num_doc[-4:]}"[:30]
+                            # Título corto para la pestaña
+                            id_pestana = num_doc[-4:] if num_doc else nombre.split()[0]
+                            titulo_pestaña = f"{nombre.split()[0]} {id_pestana}"[:30]
 
                             # Copiar pestaña
                             target_sheet = wb.copy_worksheet(hoja_base)
@@ -131,7 +140,7 @@ if excel_reporte is not None:
                             file_name=f"GFPI-F-165_Ficha_{ficha}_Consolidado.xlsx",
                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                         )
-                        st.success(f"¡Listo! Se crearon exactamente {cant_unicos_activos} pestañas (una por aprendiz activo).")
+                        st.success(f"¡Listo! Se crearon exactamente {cant_unicos_activos} pestañas individuales.")
 
     except Exception as e:
         st.error(f"Ocurrió un error al procesar el archivo: {e}")
