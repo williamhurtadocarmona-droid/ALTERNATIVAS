@@ -52,10 +52,9 @@ if excel_reporte is not None:
             col_tel = [c for c in df_aprendices.columns if 'Teléfono' in c or 'Celular' in c or 'Móvil' in c]
             col_tel = col_tel[0] if col_tel else None
 
-            # 4. FILTRAR POR "EN FORMACIÓN"
+            # 4. FILTRAR POR "EN FORMACIÓN" Y ELIMINAR DUPLICADOS
             df_activos = df_aprendices[df_aprendices[col_estado].astype(str).str.upper().str.contains("EN FORMAC", na=False)].copy()
 
-            # Definir columna clave para deduplicar (prioridad: Número de documento, si no Nombres)
             col_clave = col_num_doc if col_num_doc else (col_nombres[0] if col_nombres else None)
 
             if col_clave:
@@ -71,28 +70,30 @@ if excel_reporte is not None:
             if cant_unicos_activos == 0:
                 st.warning("⚠️ No se encontraron aprendices con estado 'EN FORMACIÓN' en el archivo.")
             else:
-                # Mostrar vista previa
+                # Mostrar lista completa en pantalla
                 cols_mostrar = [c for c in [col_tipo_doc, col_num_doc, col_nombres[0] if col_nombres else None, col_estado] if c is not None]
-                st.dataframe(df_unicos[cols_mostrar].head(10))
+                st.dataframe(df_unicos[cols_mostrar])
 
                 if st.button("🚀 Generar Excel con Pestañas Individuales"):
-                    with st.spinner(f"Generando {cant_unicos_activos} pestañas individuales..."):
+                    with st.spinner(f"Generando {cant_unicos_activos} pestañas a partir de 'Selección Modificación F2 Indiv'..."):
                         
                         wb = openpyxl.load_workbook(PLANTILLA_BASE)
                         
-                        # Buscar la pestaña plantilla individual
-                        hoja_plantilla_nombre = None
-                        for name in wb.sheetnames:
-                            if "F2" in name or "Individual" in name:
-                                hoja_plantilla_nombre = name
-                                break
-                        
-                        if not hoja_plantilla_nombre:
-                            hoja_plantilla_nombre = wb.sheetnames[-1]
+                        # Nombre exacto de la pestaña plantilla a duplicar
+                        NOMBRE_HOJA_PLANTILLA = "Selección Modificación F2 Indiv"
 
-                        hoja_base = wb[hoja_plantilla_nombre]
+                        if NOMBRE_HOJA_PLANTILLA in wb.sheetnames:
+                            hoja_base = wb[NOMBRE_HOJA_PLANTILLA]
+                        else:
+                            # Búsqueda alternativa por coincidencia parcial si el nombre varía levemente
+                            hoja_encontrada = [s for s in wb.sheetnames if "F2" in s or "Indiv" in s]
+                            if hoja_encontrada:
+                                hoja_base = wb[hoja_encontrada[0]]
+                            else:
+                                st.error(f"⚠️ No se encontró la pestaña '{NOMBRE_HOJA_PLANTILLA}' en el archivo de plantilla Excel.")
+                                st.stop()
 
-                        # Recorrer solo a los aprendices ÚNICOS
+                        # Recorrer a todos los aprendices únicos activos
                         for idx, row in df_unicos.iterrows():
                             # Obtener Nombres y Apellidos
                             if col_apellidos:
@@ -106,15 +107,15 @@ if excel_reporte is not None:
                             tipo_doc = str(row[col_tipo_doc]) if col_tipo_doc and pd.notna(row[col_tipo_doc]) else ""
                             num_doc = str(row[col_num_doc]).strip() if col_num_doc and pd.notna(row[col_num_doc]) else ""
 
-                            # Título corto para la pestaña
+                            # Definir nombre corto para la pestaña (máx. 31 caracteres)
                             id_pestana = num_doc[-4:] if num_doc else nombre.split()[0]
                             titulo_pestaña = f"{nombre.split()[0]} {id_pestana}"[:30]
 
-                            # Copiar pestaña
+                            # Copiar la pestaña 'Selección Modificación F2 Indiv'
                             target_sheet = wb.copy_worksheet(hoja_base)
                             target_sheet.title = titulo_pestaña
 
-                            # Rellenar campos en la plantilla
+                            # Rellenar campos en la plantilla copiada
                             target_sheet['D11'] = programa          # Programa
                             target_sheet['Q11'] = ficha             # Ficha
                             target_sheet['D12'] = centro            # Centro
@@ -129,7 +130,7 @@ if excel_reporte is not None:
                             if col_tel and pd.notna(row[col_tel]):
                                 target_sheet['U16'] = str(row[col_tel])
 
-                        # Guardar el resultado
+                        # Guardar el libro generado
                         output = io.BytesIO()
                         wb.save(output)
                         output.seek(0)
@@ -140,7 +141,7 @@ if excel_reporte is not None:
                             file_name=f"GFPI-F-165_Ficha_{ficha}_Consolidado.xlsx",
                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                         )
-                        st.success(f"¡Listo! Se crearon exactamente {cant_unicos_activos} pestañas individuales.")
+                        st.success(f"¡Listo! Se copiaron y rellenaron {cant_unicos_activos} pestañas individuales basándose en 'Selección Modificación F2 Indiv'.")
 
     except Exception as e:
         st.error(f"Ocurrió un error al procesar el archivo: {e}")
