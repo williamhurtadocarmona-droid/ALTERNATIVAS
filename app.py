@@ -88,9 +88,10 @@ if excel_reporte is not None:
                     with st.spinner(f"Procesando {cant_unicos_activos} aprendices..."):
                         
                         wb = openpyxl.load_workbook(PLANTILLA_BASE)
-                        
+                        wb.calculation.calcMode = 'manual' # Para mejorar velocidad al abrir
+
                         # ==========================================
-                        # A. LLENAR PESTAÑA GRUPAL (Mapeo de Columnas A-H)
+                        # A. LLENAR PESTAÑA GRUPAL (Mapeo idéntico a tu ejemplo)
                         # ==========================================
                         HOJA_GRUPAL_NOMBRE = "Selección formato 1 - Grupal"
                         if HOJA_GRUPAL_NOMBRE in wb.sheetnames:
@@ -106,9 +107,9 @@ if excel_reporte is not None:
                                 tipo_doc = str(row[col_tipo_doc]).strip() if col_tipo_doc and pd.notna(row[col_tipo_doc]) else ""
                                 num_doc = str(row[col_num_doc]).strip() if col_num_doc and pd.notna(row[col_num_doc]) else ""
 
-                                # Mapeo exacto según la captura de pantalla:
+                                # Mapeo de columnas según el diseño oficial:
                                 escribir_celda_segura(hoja_grupal, fila_actual, 1, i + 1)           # Col A (1): N°
-                                escribir_celda_segura(hoja_grupal, fila_actual, 2, tipo_doc)       # Col B (2): Tipo Doc
+                                escribir_celda_segura(hoja_grupal, fila_actual, 2, tipo_doc)       # Col B (2): Tipo de documento
                                 escribir_celda_segura(hoja_grupal, fila_actual, 3, num_doc)        # Col C (3): Número de identificación
                                 escribir_celda_segura(hoja_grupal, fila_actual, 4, nomb)           # Col D (4): Nombres
                                 escribir_celda_segura(hoja_grupal, fila_actual, 5, apel)           # Col E (5): Apellidos
@@ -172,7 +173,7 @@ if excel_reporte is not None:
                             file_name=f"GFPI-F-165_Ficha_{ficha}_Consolidado.xlsx",
                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                         )
-                        st.success(f"¡Listo! Se corrigió el alineamiento de columnas (A a la H) y se generaron las pestañas individuales.")
+                        st.success(f"¡Perfecto! Se organizaron todas las columnas exactamente como en tu ejemplo a partir de la fila 18.")
 
     except Exception as e:
         st.error(f"Ocurrió un error al procesar el archivo: {e}")
