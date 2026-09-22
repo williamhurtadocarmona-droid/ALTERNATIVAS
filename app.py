@@ -90,7 +90,7 @@ if excel_reporte is not None:
                         wb = openpyxl.load_workbook(PLANTILLA_BASE)
                         
                         # ==========================================
-                        # A. LLENAR PESTAÑA GRUPAL (Fila 18)
+                        # A. LLENAR PESTAÑA GRUPAL (Mapeo de Columnas A-H)
                         # ==========================================
                         HOJA_GRUPAL_NOMBRE = "Selección formato 1 - Grupal"
                         if HOJA_GRUPAL_NOMBRE in wb.sheetnames:
@@ -106,16 +106,17 @@ if excel_reporte is not None:
                                 tipo_doc = str(row[col_tipo_doc]).strip() if col_tipo_doc and pd.notna(row[col_tipo_doc]) else ""
                                 num_doc = str(row[col_num_doc]).strip() if col_num_doc and pd.notna(row[col_num_doc]) else ""
 
-                                # Escritura segura soportando celdas combinadas
-                                escribir_celda_segura(hoja_grupal, fila_actual, 2, tipo_doc)       # Col B: Tipo Doc
-                                escribir_celda_segura(hoja_grupal, fila_actual, 3, num_doc)        # Col C: Documento
-                                escribir_celda_segura(hoja_grupal, fila_actual, 4, nomb)           # Col D: Nombres
-                                escribir_celda_segura(hoja_grupal, fila_actual, 5, apel)           # Col E: Apellidos
+                                # Mapeo exacto según la captura de pantalla:
+                                escribir_celda_segura(hoja_grupal, fila_actual, 1, i + 1)           # Col A (1): N°
+                                escribir_celda_segura(hoja_grupal, fila_actual, 2, tipo_doc)       # Col B (2): Tipo Doc
+                                escribir_celda_segura(hoja_grupal, fila_actual, 3, num_doc)        # Col C (3): Número de identificación
+                                escribir_celda_segura(hoja_grupal, fila_actual, 4, nomb)           # Col D (4): Nombres
+                                escribir_celda_segura(hoja_grupal, fila_actual, 5, apel)           # Col E (5): Apellidos
                                 
                                 if col_correo and pd.notna(row[col_correo]):
-                                    escribir_celda_segura(hoja_grupal, fila_actual, 8, str(row[col_correo]))  # Col H: Correo
+                                    escribir_celda_segura(hoja_grupal, fila_actual, 7, str(row[col_correo]))  # Col G (7): Correo electrónico
                                 if col_tel and pd.notna(row[col_tel]):
-                                    escribir_celda_segura(hoja_grupal, fila_actual, 9, str(row[col_tel]))     # Col I: Teléfono
+                                    escribir_celda_segura(hoja_grupal, fila_actual, 8, str(row[col_tel]))     # Col H (8): Teléfono
 
                         # ==========================================
                         # B. GENERAR PESTAÑAS INDIVIDUALES
@@ -146,7 +147,7 @@ if excel_reporte is not None:
                             target_sheet = wb.copy_worksheet(hoja_base)
                             target_sheet.title = titulo_pestaña
 
-                            # Escritura segura en pestaña individual
+                            # Escritura en pestaña individual
                             escribir_celda_segura(target_sheet, 12, 3, tipo_doc)        # C12
                             escribir_celda_segura(target_sheet, 12, 4, num_doc)         # D12
                             escribir_celda_segura(target_sheet, 12, 5, nombre_completo) # E12
@@ -171,7 +172,7 @@ if excel_reporte is not None:
                             file_name=f"GFPI-F-165_Ficha_{ficha}_Consolidado.xlsx",
                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                         )
-                        st.success(f"¡Listo! Se procesó la tabla grupal desde la fila 18 y se generaron {cant_unicos_activos} pestañas sin errores de celdas combinadas.")
+                        st.success(f"¡Listo! Se corrigió el alineamiento de columnas (A a la H) y se generaron las pestañas individuales.")
 
     except Exception as e:
         st.error(f"Ocurrió un error al procesar el archivo: {e}")
