@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import openpyxl
-from openpyxl.cell.cell import Cell
 import io
 import os
 
@@ -9,18 +8,6 @@ st.set_page_config(page_title="Generador GFPI-F-165 SENA", page_icon="📊", lay
 
 st.title("📊 Generador de Formato GFPI-F-165 (Etapa Productiva)")
 st.write("Sube el reporte de Sofia Plus para llenar el formato **Grupal** y generar las pestañas **Individuales**.")
-
-# Función para escribir de forma segura en celdas combinadas
-def escribir_celda_segura(hoja, coordenada, valor):
-    celda = hoja[coordenada]
-    if isinstance(celda, Cell):
-        celda.value = valor
-    else:
-        # Si la celda es parte de un rango combinado, buscamos la celda principal (top-left)
-        for rango in hoja.merged_cells.ranges:
-            if coordenada in rango:
-                hoja.cell(row=rango.min_row, column=rango.min_col, value=valor)
-                break
 
 # 1. Cargar el reporte de Sofia Plus
 excel_reporte = st.file_uploader("Sube el reporte de Sofia Plus (.xlsx / .xls)", type=["xlsx", "xls"])
@@ -89,13 +76,13 @@ if excel_reporte is not None:
                         wb = openpyxl.load_workbook(PLANTILLA_BASE)
                         
                         # ==========================================
-                        # A. LLENAR PESTAÑA GRUPAL
+                        # A. LLENAR PESTAÑA GRUPAL (A partir de Fila 18)
                         # ==========================================
                         HOJA_GRUPAL_NOMBRE = "Selección formato 1 - Grupal"
                         if HOJA_GRUPAL_NOMBRE in wb.sheetnames:
                             hoja_grupal = wb[HOJA_GRUPAL_NOMBRE]
                             
-                            fila_inicio_grupal = 13 
+                            fila_inicio_grupal = 18  # Se inicia en la fila 18 según el formato
                             
                             for i, (_, row) in enumerate(df_unicos.iterrows(), start=0):
                                 fila_actual = fila_inicio_grupal + i
@@ -105,16 +92,16 @@ if excel_reporte is not None:
                                 tipo_doc = str(row[col_tipo_doc]).strip() if col_tipo_doc and pd.notna(row[col_tipo_doc]) else ""
                                 num_doc = str(row[col_num_doc]).strip() if col_num_doc and pd.notna(row[col_num_doc]) else ""
 
-                                escribir_celda_segura(hoja_grupal, f'A{fila_actual}', i + 1)
-                                escribir_celda_segura(hoja_grupal, f'B{fila_actual}', tipo_doc)
-                                escribir_celda_segura(hoja_grupal, f'C{fila_actual}', num_doc)
-                                escribir_celda_segura(hoja_grupal, f'D{fila_actual}', nomb)
-                                escribir_celda_segura(hoja_grupal, f'E{fila_actual}', apel)
+                                # Mapeo según la estructura observada en la imagen:
+                                hoja_grupal.cell(row=fila_actual, column=2, value=tipo_doc)       # Col B: Tipo Doc
+                                hoja_grupal.cell(row=fila_actual, column=3, value=num_doc)        # Col C: Documento
+                                hoja_grupal.cell(row=fila_actual, column=4, value=nomb)           # Col D: Nombres
+                                hoja_grupal.cell(row=fila_actual, column=5, value=apel)           # Col E: Apellidos
                                 
                                 if col_correo and pd.notna(row[col_correo]):
-                                    escribir_celda_segura(hoja_grupal, f'G{fila_actual}', str(row[col_correo]))
+                                    hoja_grupal.cell(row=fila_actual, column=8, value=str(row[col_correo]))  # Col H: Correo
                                 if col_tel and pd.notna(row[col_tel]):
-                                    escribir_celda_segura(hoja_grupal, f'H{fila_actual}', str(row[col_tel]))
+                                    hoja_grupal.cell(row=fila_actual, column=9, value=str(row[col_tel]))     # Col I: Teléfono
 
                         # ==========================================
                         # B. GENERAR PESTAÑAS INDIVIDUALES
@@ -145,18 +132,19 @@ if excel_reporte is not None:
                             target_sheet = wb.copy_worksheet(hoja_base)
                             target_sheet.title = titulo_pestaña
 
-                            escribir_celda_segura(target_sheet, 'C12', tipo_doc)
-                            escribir_celda_segura(target_sheet, 'D12', num_doc)
-                            escribir_celda_segura(target_sheet, 'E12', nombre_completo)
+                            # Asignación de datos en plantilla individual
+                            target_sheet.cell(row=12, column=3, value=tipo_doc)        # C12
+                            target_sheet.cell(row=12, column=4, value=num_doc)         # D12
+                            target_sheet.cell(row=12, column=5, value=nombre_completo) # E12
                             
                             if col_tel and pd.notna(row[col_tel]):
-                                escribir_celda_segura(target_sheet, 'F12', str(row[col_tel]))
+                                target_sheet.cell(row=12, column=6, value=str(row[col_tel])) # F12
                             if col_correo and pd.notna(row[col_correo]):
-                                escribir_celda_segura(target_sheet, 'G12', str(row[col_correo]))
+                                target_sheet.cell(row=12, column=7, value=str(row[col_correo])) # G12
                             
-                            escribir_celda_segura(target_sheet, 'C17', centro)
-                            escribir_celda_segura(target_sheet, 'E17', ficha)
-                            escribir_celda_segura(target_sheet, 'F17', programa)
+                            target_sheet.cell(row=17, column=3, value=centro)   # C17
+                            target_sheet.cell(row=17, column=5, value=ficha)    # E17
+                            target_sheet.cell(row=17, column=6, value=programa) # F17
 
                         # Guardar resultado
                         output = io.BytesIO()
@@ -169,7 +157,7 @@ if excel_reporte is not None:
                             file_name=f"GFPI-F-165_Ficha_{ficha}_Consolidado.xlsx",
                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                         )
-                        st.success(f"¡Listo! Se procesó el formato Grupal y se generaron {cant_unicos_activos} pestañas individuales sin errores.")
+                        st.success(f"¡Listo! Se procesó la tabla grupal a partir de la fila 18 y se generaron {cant_unicos_activos} pestañas individuales.")
 
     except Exception as e:
         st.error(f"Ocurrió un error al procesar el archivo: {e}")
